@@ -3,3 +3,5 @@
 /output.mp4
 /params
 /race_drone.npz
+*.npz
+*.mp4

@@ -17,6 +17,14 @@ cam.rotate([0., -np.pi/2, 0.])
 # grid = graphics.create_grid(10, 10, 0.1)
 big_grid = graphics.create_grid(6, 6, 1)
 
+# 1x1m gate
+gate = graphics.create_path(np.array([
+    [0, 0.5, 0.5],
+    [0, 0.5, -0.5],
+    [0, -0.5, -0.5],
+    [0, -0.5, 0.5]
+]), loop=True)
+
 drone, forces = graphics.create_drone(0.08)
 
 scl = 0.2
@@ -34,7 +42,7 @@ def nothing(x):
     pass
 
 
-def animate(t, x, y, z, phi, theta, psi, u, autopilot_mode=[], target=[], waypoints=[], file='output.mp4', multiple_trajectories=False, simultaneous=False, colors=[], names=[], alpha=0, step=1, **kwargs):
+def animate(t, x, y, z, phi, theta, psi, u, autopilot_mode=[], target=[], waypoints=[], gate_pos=[], gate_yaw=[], file='output.mp4', multiple_trajectories=False, simultaneous=False, colors=[], names=[], alpha=0, step=1, **kwargs):
     follow=False
     auto_play=False
     draw_path=False
@@ -127,12 +135,24 @@ def animate(t, x, y, z, phi, theta, psi, u, autopilot_mode=[], target=[], waypoi
         
         for w in waypoints:
             w.draw(frame, cam, color=(0,0,255),pt=4)
-            
-        if time_index < len(target):
+        
+        if len(target)==len(t) and len(target[0])>0:
+            for i in range(len(t)):
+                j = min(time_index, len(target[i])-1)
+                tt = target[i][j]
+                tt_graphic = graphics.create_path([tt,tt+[0,0,0.01]])
+                tt_graphic.draw(frame, cam, color=colors[i],pt=8)
+        elif time_index < len(target):
             tt = target[time_index]
             tt_graphic = graphics.create_path([tt,tt+[0,0,0.01]])
             tt_graphic.draw(frame, cam, color=(0,0,255),pt=8)
-
+                    
+        # draw gates
+        for pos_, yaw_ in zip(gate_pos, gate_yaw):
+            gate.translate(pos_-gate.pos)
+            gate.rotate([0,0,yaw_])
+            gate.draw(frame, cam, color=(0,140,255), pt=4)
+            
         if draw_path and not simultaneous:
             path.draw(frame, cam, color=(0, 255, 0), pt=2)
             
