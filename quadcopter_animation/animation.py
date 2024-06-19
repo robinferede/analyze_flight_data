@@ -136,7 +136,7 @@ def animate(t, x, y, z, phi, theta, psi, u, autopilot_mode=[], target=[], waypoi
         for w in waypoints:
             w.draw(frame, cam, color=(0,0,255),pt=4)
         
-        if len(target)==len(t) and len(target[0])>0:
+        if len(target)==len(t) and False:
             for i in range(len(t)):
                 j = min(time_index, len(target[i])-1)
                 tt = target[i][j]
