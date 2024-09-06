@@ -17,12 +17,14 @@ cam.rotate([0., -np.pi/2, 0.])
 # grid = graphics.create_grid(10, 10, 0.1)
 big_grid = graphics.create_grid(6, 6, 1)
 
-# 1x1m gate
+
+# nxn (m) gate
+n = 1.5
 gate = graphics.create_path(np.array([
-    [0, 0.5, 0.5],
-    [0, 0.5, -0.5],
-    [0, -0.5, -0.5],
-    [0, -0.5, 0.5]
+    [0, n/2, n/2],
+    [0, n/2, -n/2],
+    [0, -n/2, -n/2],
+    [0, -n/2, n/2]
 ]), loop=True)
 
 drone, forces = graphics.create_drone(0.08)
@@ -73,7 +75,7 @@ def animate(t, x, y, z, phi, theta, psi, u, autopilot_mode=[], target=[], waypoi
     if simultaneous:
         for i in range(len(t)):
             p = np.stack([x[i],y[i],z[i]]).T
-            paths.append(graphics.create_path([pi for pi in p[0::5]]))
+            paths.append(graphics.create_path([pi for pi in p]))
     
     path = graphics.create_path([p for p in pos[0::5]])
     

@@ -1,7 +1,9 @@
 /ekf_test_data.npz
 /flight_data
+/pi_logs
 /output.mp4
 /params
 /race_drone.npz
+/orin_logs
 *.npz
 *.mp4
