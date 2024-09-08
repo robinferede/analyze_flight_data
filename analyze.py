@@ -94,7 +94,7 @@ def quat_to_euler(q):
     return phi, theta, psi
     
 
-def load_flight_data(file_name, new_format=False):
+def load_flight_data(file_name, new_format=True):
     print('Loading', file_name)
     with open(file_name) as file:
         reader = csv.reader(file)
@@ -467,11 +467,15 @@ def animate_data_double(data1, data2):
     )
     
 def animate_data_multiple(*data_list, **kwargs):
-    # color map
-    import matplotlib.cm as cm
-    colors_ = cm.get_cmap('jet', len(data_list))
-    # to int
-    colors = lambda i: tuple(int(c*255) for c in colors_(i)[:-1])
+    if 'colors' in kwargs:
+        colors_ = kwargs.pop('colors')
+        colors = lambda i: colors_[i]
+    else:
+        # color map
+        import matplotlib.cm as cm
+        colors_ = cm.get_cmap('jet', len(data_list))
+        # to int
+        colors = lambda i: tuple(int(c*255) for c in colors_(i)[:-1])
     
     animation.animate(
         [d['t'] for d in data_list],
