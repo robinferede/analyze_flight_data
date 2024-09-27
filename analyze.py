@@ -225,25 +225,21 @@ def load_flight_data(file_name, new_format=True):
             data['vy_opti'] = data.pop('extVel[1]')*1e-2 # cm/s to m/s
             data['vz_opti'] = data.pop('extVel[2]')*1e-2 # cm/s to m/s
             
+            data['vel_test'] = np.sqrt(data['vx_opti']**2 + data['vy_opti']**2 + data['vz_opti']**2)
+            
+        if 'extAtt[0]' in data:
             data['phi_opti'] = data.pop('extAtt[0]')/1000 # mrad to rad
             data['theta_opti'] = data.pop('extAtt[1]')/1000 # mrad to rad
             data['psi_opti'] = data.pop('extAtt[2]')/1000 # mrad to rad
+        if 'extQuat[0]' in data:
+            data['qw_opti'] = data.pop('extQuat[0]')/quat_scaling
+            data['qx_opti'] = data.pop('extQuat[1]')/quat_scaling
+            data['qy_opti'] = data.pop('extQuat[2]')/quat_scaling
+            data['qz_opti'] = data.pop('extQuat[3]')/quat_scaling
             
-            data['vel_test'] = np.sqrt(data['vx_opti']**2 + data['vy_opti']**2 + data['vz_opti']**2)
-        
-            # OPTITRACK INTERPOLATED
-            updates = (np.diff(data['x_opti']) != 0) | (np.diff(data['y_opti']) != 0) | (np.diff(data['z_opti']) != 0) | (np.diff(data['phi_opti']) != 0) | (np.diff(data['theta_opti']) != 0) | (np.diff(data['psi_opti']) != 0)
-            updates = np.where(updates)[0]+1
-            
-            # data['t_opti_rec'] = data['t'][updates]
-            # data['t_opti_sent'] = data['extTime'][updates]/1000 # ms to s
-            # data['x_opti_int'] = np.interp(data['t'], data['t'][updates], data['x_opti'][updates])
-            # data['y_opti_int'] = np.interp(data['t'], data['t'][updates], data['y_opti'][updates])
-            # data['z_opti_int'] = np.interp(data['t'], data['t'][updates], data['z_opti'][updates])
-            # data['phi_opti_int'] = np.interp(data['t'], data['t'][updates], data['phi_opti'][updates])
-            # data['theta_opti_int'] = np.interp(data['t'], data['t'][updates], data['theta_opti'][updates])
-            # data['psi_opti_int'] = np.interp(data['t'], data['t'][updates], data['psi_opti'][updates])
-        
+            data['phi_opti'] = np.arctan2(2*(data['qw_opti']*data['qx_opti'] + data['qy_opti']*data['qz_opti']), 1 - 2*(data['qx_opti']**2 + data['qy_opti']**2))
+            data['theta_opti'] = np.arcsin(2*(data['qw_opti']*data['qy_opti'] - data['qz_opti']*data['qx_opti']))
+            data['psi_opti'] = np.arctan2(2*(data['qw_opti']*data['qz_opti'] + data['qx_opti']*data['qy_opti']), 1 - 2*(data['qy_opti']**2 + data['qz_opti']**2))
         
         # IMU
         gyro_scale = np.pi/180 # deg/s to rad/s
@@ -294,9 +290,18 @@ def load_flight_data(file_name, new_format=True):
             data['ekf_vx'] = data.pop('ekf_vel[0]')*1e-2 # cm/s to m/s
             data['ekf_vy'] = data.pop('ekf_vel[1]')*1e-2 # cm/s to m/s
             data['ekf_vz'] = data.pop('ekf_vel[2]')*1e-2 # cm/s to m/s
-            data['ekf_phi'] = data.pop('ekf_att[0]')/1000 # mrad to rad
-            data['ekf_theta'] = data.pop('ekf_att[1]')/1000 # mrad to rad
-            data['ekf_psi'] = data.pop('ekf_att[2]')/1000 # mrad to rad
+            if 'ekf_att[0]' in data:
+                data['ekf_phi'] = data.pop('ekf_att[0]')/1000 # mrad to rad
+                data['ekf_theta'] = data.pop('ekf_att[1]')/1000 # mrad to rad
+                data['ekf_psi'] = data.pop('ekf_att[2]')/1000 # mrad to rad
+            if 'ekf_quat[0]' in data:
+                data['ekf_qw'] = data.pop('ekf_quat[0]')/quat_scaling
+                data['ekf_qx'] = data.pop('ekf_quat[1]')/quat_scaling
+                data['ekf_qy'] = data.pop('ekf_quat[2]')/quat_scaling
+                data['ekf_qz'] = data.pop('ekf_quat[3]')/quat_scaling
+                data['ekf_phi'] = np.arctan2(2*(data['ekf_qw']*data['ekf_qx'] + data['ekf_qy']*data['ekf_qz']), 1 - 2*(data['ekf_qx']**2 + data['ekf_qy']**2))
+                data['ekf_theta'] = np.arcsin(2*(data['ekf_qw']*data['ekf_qy'] - data['ekf_qz']*data['ekf_qx']))
+                data['ekf_psi'] = np.arctan2(2*(data['ekf_qw']*data['ekf_qz'] + data['ekf_qx']*data['ekf_qy']), 1 - 2*(data['ekf_qy']**2 + data['ekf_qz']**2))
             data['ekf_acc_b_x'] = data.pop('ekf_acc_b[0]')/1000 # mm/s^2 to m/s^2
             data['ekf_acc_b_y'] = data.pop('ekf_acc_b[1]')/1000 # mm/s^2 to m/s^2
             data['ekf_acc_b_z'] = data.pop('ekf_acc_b[2]')/1000 # mm/s^2 to m/s^2
@@ -426,6 +431,41 @@ def load_flight_data(file_name, new_format=True):
         
         return data
 
+# DATA TRIM FUNCTIONS
+def trim_nn_active(data):
+    indices = data['flightModeFlags'] > 8000
+    data = {k: v[indices] for k, v in data.items() if isinstance(v, np.ndarray) and len(v) == len(indices)}
+    data['t'] = data['t'] - data['t'][0]
+    return data
+
+def trim_time(data, t0=0, tf=12):
+    indices = (data['t'] >= t0) & (data['t'] <= tf)
+    try:
+        # add one more data point to make sure that t=tf is included
+        i = np.min(np.where(data['t']>tf)[0])
+        indices[i] = True
+    except:
+        print("Warning: tf is greater than the last time point")
+    data = {k: v[indices] for k, v in data.items() if isinstance(v, np.ndarray) and len(v) == len(indices)}
+    data['t'] = data['t'] - data['t'][0]
+    return data
+
+def split_where_nn_active(data):
+    # plt.plot(data['flightModeFlags'])
+    # plt.show()
+    nn_active = data['flightModeFlags'] > 8000
+    nn_activate = [i for i in range(1, len(nn_active)) if nn_active[i] and not nn_active[i-1]]
+    nn_deactivate = [i for i in range(1, len(nn_active)) if not nn_active[i] and nn_active[i-1]]
+    # make sure nn_activate and nn_deactivate are the same length
+    if len(nn_activate) > len(nn_deactivate):
+        nn_deactivate.append(len(nn_active))
+    split_data = []
+    for i in range(len(nn_activate)):
+        split_data.append({k: v[nn_activate[i]:nn_deactivate[i]] for k, v in data.items() if isinstance(v, np.ndarray) and len(v) == len(data['t'])})
+        split_data[-1]['t'] = split_data[-1]['t'] - split_data[-1]['t'][0]
+    return split_data
+
+
 # FUNCTIONS FOR ANIMATIONS  
 from quadcopter_animation import animation
 import importlib
@@ -539,7 +579,7 @@ def animate_data2(data):
     )
     
 # FUNCTIONS FOR SYSTEM IDENTIFICATION
-def fit_thrust_drag_model(data):
+def fit_thrust_drag_model(data, subtract_ekf_bias=True):
     print('fitting thrust and drag model')
     fig, axs = plt.subplots(1, 3, figsize=(10, 10), sharex=True, sharey=True)
     
@@ -552,13 +592,24 @@ def fit_thrust_drag_model(data):
         # data['vz']*(data['omega[0]']+data['omega[1]']+data['omega[2]']+data['omega[3]'])
     ])
     Y = data['az']
+    if subtract_ekf_bias:
+        Y = data['az'] - data['ekf_acc_b_z']
     k_w, = A = np.linalg.lstsq(X.T, Y, rcond=None)[0]
+    
+    # 2nd thrust model for ref
+    X2 = np.stack([
+        data['omega[0]']**2 + data['omega[1]']**2 + data['omega[2]']**2 + data['omega[3]']**2,
+        # data['vbx']**2 + data['vby']**2,
+        data['vz']*(data['omega[0]']+data['omega[1]']+data['omega[2]']+data['omega[3]'])
+    ])
+    k_w2, k_z2 = A2 = np.linalg.lstsq(X2.T, Y, rcond=None)[0]
     
     if 'az_unfiltered' in data:
         axs[0].plot(data['t'], data['az_unfiltered'], label='az raw', alpha=0.1, color='blue')
     axs[0].plot(data['t'], Y, label='az') #, alpha=0.2)
     # axs[0].plot(data['t'], data['az_filt'], label='az filt')
     axs[0].plot(data['t'], A@X, label='T model')
+    axs[0].plot(data['t'], A2@X2, label='T model 2')
     # axs[0].plot(data['t'], A_nom@X, label='T model nominal')
     axs[0].set_xlabel('t [s]')
     axs[0].set_ylabel('acc [m/s^2]')
@@ -573,6 +624,8 @@ def fit_thrust_drag_model(data):
     X = np.stack([data['vbx']*(data['omega[0]']+data['omega[1]']+data['omega[2]']+data['omega[3]'])])
     # X = np.stack([data['vbx']])
     Y = data['ax']
+    if subtract_ekf_bias:
+        Y = data['ax'] - data['ekf_acc_b_x']
     k_x, = A = np.linalg.lstsq(X.T, Y, rcond=None)[0]
     
     if 'ax_unfiltered' in data:
@@ -593,6 +646,8 @@ def fit_thrust_drag_model(data):
     X = np.stack([data['vby']*(data['omega[0]']+data['omega[1]']+data['omega[2]']+data['omega[3]'])])
     # X = np.stack([data['vby']])
     Y = data['ay']
+    if subtract_ekf_bias:
+        Y = data['ay'] - data['ekf_acc_b_y']
     k_y, = A = np.linalg.lstsq(X.T, Y, rcond=None)[0]
     
     if 'ay_unfiltered' in data:
