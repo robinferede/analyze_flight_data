@@ -305,9 +305,9 @@ def load_flight_data(file_name, new_format=True):
             data['ekf_acc_b_x'] = data.pop('ekf_acc_b[0]')/1000 # mm/s^2 to m/s^2
             data['ekf_acc_b_y'] = data.pop('ekf_acc_b[1]')/1000 # mm/s^2 to m/s^2
             data['ekf_acc_b_z'] = data.pop('ekf_acc_b[2]')/1000 # mm/s^2 to m/s^2
-            data['ekf_gyro_b_x'] = data.pop('ekf_gyro_b[0]')*np.pi/180
-            data['ekf_gyro_b_y'] = data.pop('ekf_gyro_b[1]')*np.pi/180
-            data['ekf_gyro_b_z'] = data.pop('ekf_gyro_b[2]')*np.pi/180
+            data['ekf_gyro_b_x'] = data.pop('ekf_gyro_b[0]')/1000*np.pi/180
+            data['ekf_gyro_b_y'] = data.pop('ekf_gyro_b[1]')/1000*np.pi/180
+            data['ekf_gyro_b_z'] = data.pop('ekf_gyro_b[2]')/1000*np.pi/180
         
             data['ax_filt_unbiased'] = data['ax_filt'] - data['ekf_acc_b_x']
             data['ay_filt_unbiased'] = data['ay_filt'] - data['ekf_acc_b_y']
@@ -554,8 +554,7 @@ def animate_data_multiple2(*data_list, **kwargs):
         multiple_trajectories=True,
         simultaneous=True,
         colors=[colors(i) for i in range(len(data_list))]+[colors2(i) for i in range(len(data_list))],
-        gate_pos=gate_pos,
-        gate_yaw=gate_yaw
+        **kwargs,
     )
     
     
@@ -909,7 +908,7 @@ def ekf_plot(data):
     ekf_updates = np.where(ekf_updates)[0]+1
 
     # subplots 1x3 with ekf_x, ekf_y, ekf_z
-    fig, axs = plt.subplots(5, 3, figsize=(5,5), sharex=True, sharey='row', tight_layout=True)
+    fig, axs = plt.subplots(5, 3, figsize=(10,10), sharex=True, sharey='row', tight_layout=True)
 
     # POSITION
     plt.sca(axs[0,0])
