@@ -1,5 +1,6 @@
 /ekf_test_data.npz
 /flight_data
+/flight_data_BBL
 /pi_logs
 /output.mp4
 /params
@@ -7,3 +8,6 @@
 /orin_logs
 *.npz
 *.mp4
+*.BFL
+/__pycache__
+*.pyc

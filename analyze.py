@@ -111,7 +111,7 @@ def load_flight_data(file_name, new_format=True):
         data = dict(zip(keys,data.T))
         
         # renaming keys
-        data['t'] = data.pop('time')*1e-6 # us to s
+        data['t'] = data['time']*1e-6 # us to s
         data['t'] -= data['t'][0] # start at 0
         
         # print logging frequency
@@ -433,7 +433,10 @@ def load_flight_data(file_name, new_format=True):
 
 # DATA TRIM FUNCTIONS
 def trim_nn_active(data):
-    indices = data['flightModeFlags'] > 8000
+    if 'nn_active' in data.keys():
+        indices = data['nn_active']>0.
+    else:
+        indices = data['flightModeFlags'] > 8000
     data = {k: v[indices] for k, v in data.items() if isinstance(v, np.ndarray) and len(v) == len(indices)}
     data['t'] = data['t'] - data['t'][0]
     return data
