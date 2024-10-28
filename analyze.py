@@ -231,6 +231,16 @@ def load_flight_data(file_name, new_format=True):
             data['phi_opti'] = data.pop('extAtt[0]')/1000 # mrad to rad
             data['theta_opti'] = data.pop('extAtt[1]')/1000 # mrad to rad
             data['psi_opti'] = data.pop('extAtt[2]')/1000 # mrad to rad
+            
+            # get optitrack body velocities
+            v_body_opti = np.stack([
+                Rmat(phi, theta, psi).T@[vx, vy, vz]
+                for vx, vy, vz, phi, theta, psi
+                in zip(data['vx_opti'],data['vy_opti'],data['vz_opti'],data['phi_opti'],data['theta_opti'],data['psi_opti'])
+            ])
+            data['vbx_opti'] = v_body_opti[:,0]
+            data['vby_opti'] = v_body_opti[:,1]
+            data['vbz_opti'] = v_body_opti[:,2]
         if 'extQuat[0]' in data:
             data['qw_opti'] = data.pop('extQuat[0]')/quat_scaling
             data['qx_opti'] = data.pop('extQuat[1]')/quat_scaling
@@ -240,6 +250,16 @@ def load_flight_data(file_name, new_format=True):
             data['phi_opti'] = np.arctan2(2*(data['qw_opti']*data['qx_opti'] + data['qy_opti']*data['qz_opti']), 1 - 2*(data['qx_opti']**2 + data['qy_opti']**2))
             data['theta_opti'] = np.arcsin(2*(data['qw_opti']*data['qy_opti'] - data['qz_opti']*data['qx_opti']))
             data['psi_opti'] = np.arctan2(2*(data['qw_opti']*data['qz_opti'] + data['qx_opti']*data['qy_opti']), 1 - 2*(data['qy_opti']**2 + data['qz_opti']**2))
+
+            # get optitrack body velocities
+            v_body_opti = np.stack([
+                Rmat(phi, theta, psi).T@[vx, vy, vz]
+                for vx, vy, vz, phi, theta, psi
+                in zip(data['vx_opti'],data['vy_opti'],data['vz_opti'],data['phi_opti'],data['theta_opti'],data['psi_opti'])
+            ])
+            data['vbx_opti'] = v_body_opti[:,0]
+            data['vby_opti'] = v_body_opti[:,1]
+            data['vbz_opti'] = v_body_opti[:,2]
         
         # IMU
         gyro_scale = np.pi/180 # deg/s to rad/s
@@ -940,16 +960,19 @@ def ekf_plot(data):
     # VELOCITY
     plt.sca(axs[1,0])
     plt.plot(data['t'], data['ekf_vx'], label='ekf')
+    plt.plot(data['t'], data['vx_opti'], label='opti')
     plt.xlabel('t [s]')
     plt.ylabel('vx [m/s]')
     plt.legend()
     plt.sca(axs[1,1])
     plt.plot(data['t'], data['ekf_vy'], label='ekf')
+    plt.plot(data['t'], data['vy_opti'], label='opti')
     plt.xlabel('t [s]')
     plt.ylabel('vy [m/s]')
     plt.legend()
     plt.sca(axs[1,2])
     plt.plot(data['t'], data['ekf_vz'], label='ekf')
+    plt.plot(data['t'], data['vz_opti'], label='opti')
     plt.xlabel('t [s]')
     plt.ylabel('vz [m/s]')
     plt.legend()
