@@ -6,6 +6,7 @@
 /params
 /race_drone.npz
 /orin_logs
+/c_code
 *.npz
 *.mp4
 *.BFL

@@ -274,6 +274,10 @@ def load_flight_data(file_name, new_format=True):
             if new_format:
                 data['ay_unfiltered']=-data['ay_unfiltered']
                 data['az_unfiltered']=-data['az_unfiltered']
+        if 'acc_modeled[0]' in data.keys():
+            data['ax_modeled'] = data.pop('acc_modeled[0]')/1000 # mm to m
+            data['ay_modeled'] = data.pop('acc_modeled[1]')/1000
+            data['az_modeled'] = data.pop('acc_modeled[2]')/1000
         
         # filter acc
         cutoff = 8 # Hz
