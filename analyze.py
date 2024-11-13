@@ -359,16 +359,17 @@ def load_flight_data(file_name, new_format=True):
             data['r_vio'] = data.pop('vioRate[2]')*np.pi/180
 
         # UGLY HACK: overwrite states with ekf states
-        print('WARNING: overwriting states with ekf states')
-        data['x'] = data['ekf_x']
-        data['y'] = data['ekf_y']
-        data['z'] = data['ekf_z']
-        data['vx'] = data['ekf_vx']
-        data['vy'] = data['ekf_vy']
-        data['vz'] = data['ekf_vz']
-        data['phi'] = data['ekf_phi']
-        data['theta'] = data['ekf_theta']
-        data['psi'] = data['ekf_psi']
+        if 'ekf_x' in data.keys():
+            print('WARNING: overwriting states with ekf states')
+            data['x'] = data['ekf_x']
+            data['y'] = data['ekf_y']
+            data['z'] = data['ekf_z']
+            data['vx'] = data['ekf_vx']
+            data['vy'] = data['ekf_vy']
+            data['vz'] = data['ekf_vz']
+            data['phi'] = data['ekf_phi']
+            data['theta'] = data['ekf_theta']
+            data['psi'] = data['ekf_psi']
         
         
         # EXTRA
@@ -745,7 +746,7 @@ def fit_actuator_model(data):
     
     axs[0,0].plot(data['t'], data['omega[0]'], label='w')
     axs[0,0].plot(data['t'], get_w_est(res_1.x, data['u1'], data['omega[0]']), label='w est')
-    axs[0,0].plot(data['t'], get_w_est(res_tot.x, data['u1'], data['omega[0]']), label='w est tot')
+    # axs[0,0].plot(data['t'], get_w_est(res_tot.x, data['u1'], data['omega[0]']), label='w est tot')
     # axs[0,0].plot(data['t'], get_w_est(res_nom, data['u1'], data['omega[0]']), label='w est nom')
     axs[0,0].set_xlabel('t [s]')
     axs[0,0].set_ylabel('w [rad/s]')
@@ -756,7 +757,7 @@ def fit_actuator_model(data):
     
     axs[0,1].plot(data['t'], data['omega[1]'], label='w')
     axs[0,1].plot(data['t'], get_w_est(res_2.x, data['u2'], data['omega[1]']), label='w_est')
-    axs[0,1].plot(data['t'], get_w_est(res_tot.x, data['u2'], data['omega[1]']), label='w est tot')
+    # axs[0,1].plot(data['t'], get_w_est(res_tot.x, data['u2'], data['omega[1]']), label='w est tot')
     # axs[0,1].plot(data['t'], get_w_est(res_nom, data['u2'], data['omega[1]']), label='w est nom')
     axs[0,1].set_xlabel('t [s]')
     axs[0,1].set_ylabel('w [rad/s]')
@@ -767,7 +768,7 @@ def fit_actuator_model(data):
     
     axs[1,0].plot(data['t'], data['omega[2]'], label='w')
     axs[1,0].plot(data['t'], get_w_est(res_3.x, data['u3'], data['omega[2]']), label='w_est')
-    axs[1,0].plot(data['t'], get_w_est(res_tot.x, data['u3'], data['omega[2]']), label='w est tot')
+    # axs[1,0].plot(data['t'], get_w_est(res_tot.x, data['u3'], data['omega[2]']), label='w est tot')
     # axs[1,0].plot(data['t'], get_w_est(res_nom, data['u3'], data['omega[2]']), label='w est nom')
     axs[1,0].set_xlabel('t [s]')
     axs[1,0].set_ylabel('w [rad/s]')
@@ -778,7 +779,7 @@ def fit_actuator_model(data):
     
     axs[1,1].plot(data['t'], data['omega[3]'], label='w')
     axs[1,1].plot(data['t'], get_w_est(res_4.x, data['u4'], data['omega[3]']), label='w_est')
-    axs[1,1].plot(data['t'], get_w_est(res_tot.x, data['u4'], data['omega[3]']), label='w est tot')
+    # axs[1,1].plot(data['t'], get_w_est(res_tot.x, data['u4'], data['omega[3]']), label='w est tot')
     # axs[1,1].plot(data['t'], get_w_est(res_nom, data['u4'], data['omega[3]']), label='w est nom')
     axs[1,1].set_xlabel('t [s]')
     axs[1,1].set_ylabel('w [rad/s]')
@@ -813,7 +814,7 @@ def fit_moments_model(data):
     # Mz_ = k_r1*omega_1 + k_r2*omega_2 + k_r3*omega_3 + k_r4*omega_4 + k_r5*d_omega_1 + k_r6*d_omega_2 + k_r7*d_omega_3 + k_r8*d_omega_4
     
     # to get the derivative we use a low pass filter
-    cutoff = 64 # Hz
+    cutoff = 32 # Hz
     sos = sp.signal.butter(2, cutoff, 'low', fs=1/np.mean(np.diff(data['t'])), output='sos')
     
     dp = sp.signal.sosfiltfilt(sos, np.gradient(data['p'])/np.gradient(data['t']))
