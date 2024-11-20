@@ -359,18 +359,17 @@ def load_flight_data(file_name, new_format=True):
             data['r_vio'] = data.pop('vioRate[2]')*np.pi/180
 
         # UGLY HACK: overwrite states with ekf states
-        if 'ekf_x' in data.keys():
-            print('WARNING: overwriting states with ekf states')
-            data['x'] = data['ekf_x']
-            data['y'] = data['ekf_y']
-            data['z'] = data['ekf_z']
-            data['vx'] = data['ekf_vx']
-            data['vy'] = data['ekf_vy']
-            data['vz'] = data['ekf_vz']
-            data['phi'] = data['ekf_phi']
-            data['theta'] = data['ekf_theta']
-            data['psi'] = data['ekf_psi']
-        
+        # if 'ekf_x' in data.keys():
+        #     print('WARNING: overwriting states with ekf states')
+        #     data['x'] = data['ekf_x']
+        #     data['y'] = data['ekf_y']
+        #     data['z'] = data['ekf_z']
+        #     data['vx'] = data['ekf_vx']
+        #     data['vy'] = data['ekf_vy']
+        #     data['vz'] = data['ekf_vz']
+        #     data['phi'] = data['ekf_phi']
+        #     data['theta'] = data['ekf_theta']
+        #     data['psi'] = data['ekf_psi']
         
         # EXTRA
         data['v'] = np.sqrt(data['vx']**2 + data['vy']**2 + data['vz']**2)
@@ -698,7 +697,7 @@ def fit_thrust_drag_model(data, subtract_ekf_bias=True):
 
 from scipy.optimize import minimize
 
-def fit_actuator_model(data):
+def fit_actuator_model(data, raw_motor_speed=False):
     # the steadystate rpm motor response to the motor command u is described by:
     # w_c = (w_max-w_min)*sqrt(k u**2 + (1-k)*u) + w_min
     # the dynamics of the motor is described by:
@@ -725,10 +724,16 @@ def fit_actuator_model(data):
     bounds = [(0, 1000), (0, 6000), (0, 1), (1, 1000.)]
     
     # minimize for each motor
-    err_1 = lambda x: get_error(x, data['u1'], data['omega[0]'])
-    err_2 = lambda x: get_error(x, data['u2'], data['omega[1]'])
-    err_3 = lambda x: get_error(x, data['u3'], data['omega[2]'])
-    err_4 = lambda x: get_error(x, data['u4'], data['omega[3]'])
+    if raw_motor_speed:
+        err_1 = lambda x: get_error(x, data['u1'], data['omegaUnfiltered[0]'])
+        err_2 = lambda x: get_error(x, data['u2'], data['omegaUnfiltered[1]'])
+        err_3 = lambda x: get_error(x, data['u3'], data['omegaUnfiltered[2]'])
+        err_4 = lambda x: get_error(x, data['u4'], data['omegaUnfiltered[3]'])
+    else:
+        err_1 = lambda x: get_error(x, data['u1'], data['omega[0]'])
+        err_2 = lambda x: get_error(x, data['u2'], data['omega[1]'])
+        err_3 = lambda x: get_error(x, data['u3'], data['omega[2]'])
+        err_4 = lambda x: get_error(x, data['u4'], data['omega[3]'])
     err_tot = lambda x: err_1(x) + err_2(x) + err_3(x) + err_4(x)
     
     print('fitting actuator model...')
@@ -934,7 +939,12 @@ def fit_moments_model(data):
 def ekf_plot(data):
     ekf_updates = (np.diff(data['x_opti']) != 0) | (np.diff(data['y_opti']) != 0) | (np.diff(data['z_opti']) != 0) | (np.diff(data['phi_opti']) != 0) | (np.diff(data['theta_opti']) != 0) | (np.diff(data['psi_opti']) != 0)
     ekf_updates = np.where(ekf_updates)[0]+1
-
+    
+    # generate opti vx,vy,vz
+    vx_opti = np.gradient(data['x_opti'][ekf_updates], data['t'][ekf_updates])
+    vy_opti = np.gradient(data['y_opti'][ekf_updates], data['t'][ekf_updates])
+    vz_opti = np.gradient(data['z_opti'][ekf_updates], data['t'][ekf_updates])
+    
     # subplots 1x3 with ekf_x, ekf_y, ekf_z
     fig, axs = plt.subplots(5, 3, figsize=(10,10), sharex=True, sharey='row', tight_layout=True)
 
@@ -961,19 +971,19 @@ def ekf_plot(data):
     # VELOCITY
     plt.sca(axs[1,0])
     plt.plot(data['t'], data['ekf_vx'], label='ekf')
-    plt.plot(data['t'], data['vx_opti'], label='opti')
+    plt.plot(data['t'][ekf_updates], vx_opti, label='opti')
     plt.xlabel('t [s]')
     plt.ylabel('vx [m/s]')
     plt.legend()
     plt.sca(axs[1,1])
     plt.plot(data['t'], data['ekf_vy'], label='ekf')
-    plt.plot(data['t'], data['vy_opti'], label='opti')
+    plt.plot(data['t'][ekf_updates], vy_opti, label='opti')
     plt.xlabel('t [s]')
     plt.ylabel('vy [m/s]')
     plt.legend()
     plt.sca(axs[1,2])
     plt.plot(data['t'], data['ekf_vz'], label='ekf')
-    plt.plot(data['t'], data['vz_opti'], label='opti')
+    plt.plot(data['t'][ekf_updates], vz_opti, label='opti')
     plt.xlabel('t [s]')
     plt.ylabel('vz [m/s]')
     plt.legend()
